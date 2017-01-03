@@ -38,25 +38,28 @@
         currentType = window.location.hash.replace('#', ''),
         historySupport = (window.history && window.history.pushState);
 
-    // Bind to each button
-    for (var i = buttons.length - 1; i >= 0; i--) {
-        buttons[i].addEventListener('click', function() {
-            var type = this.getAttribute('data-source');
 
-            newSource(type);
+    newSource(types.video, true);
 
-            if (historySupport) {
-                history.pushState({ 'type': type }, '', '#' + type);
-            }
-        });
-    }
+    //// Bind to each button
+    //for (var i = buttons.length - 1; i >= 0; i--) {
+    //    buttons[i].addEventListener('click', function() {
+    //        var type = this.getAttribute('data-source');
+    //
+    //        newSource(type);
+    //
+    //        if (historySupport) {
+    //            history.pushState({ 'type': type }, '', '#' + type);
+    //        }
+    //    });
+    //}
 
-    // List for backwards/forwards
-    window.addEventListener('popstate', function(event) {
-        if(event.state && 'type' in event.state) {
-            newSource(event.state.type);
-        }
-    });
+    //// List for backwards/forwards
+    //window.addEventListener('popstate', function(event) {
+    //    if(event.state && 'type' in event.state) {
+    //        newSource(event.state.type);
+    //    }
+    //});
 
     // On load
     if(historySupport) {
@@ -107,54 +110,22 @@
                         src:    'https://cdn.selz.com/plyr/1.5/View_From_A_Blue_Moon_Trailer-HD.mp4',
                         type:   'video/mp4'
                     },
-                    {
-                        src:    'https://cdn.selz.com/plyr/1.5/View_From_A_Blue_Moon_Trailer-HD.webm',
-                        type:   'video/webm'
-                    }],
+                        {
+                            src:    'https://cdn.selz.com/plyr/1.5/View_From_A_Blue_Moon_Trailer-HD.webm',
+                            type:   'video/webm'
+                        }],
                     poster:     'https://cdn.selz.com/plyr/1.5/View_From_A_Blue_Moon_Trailer-HD.jpg',
                     tracks:     [{
                         kind:   'captions',
-                        label:  'English',
-                        srclang:'en',
-                        src:    'https://cdn.selz.com/plyr/1.5/View_From_A_Blue_Moon_Trailer-HD.en.vtt',
+                        label:  'French',
+                        srclang:'fr',
+                        src:    'https://player.vimeo.com/texttrack/4678937.vtt?token=1479919658_0xb926961547826118731b32faba4ce8c26dced01c',
                         default: true
-                    }]
-                });
-                break;
-
-            case types.audio:
-                player.source({
-                    type:       'audio',
-                    title:      'Kishi Bashi &ndash; &ldquo;It All Began With A Burst&rdquo;',
-                    sources: [{
-                        src:    'https://cdn.selz.com/plyr/1.5/Kishi_Bashi_-_It_All_Began_With_a_Burst.mp3',
-                        type:   'audio/mp3'
-                    },
-                    {
-                        src:    'https://cdn.selz.com/plyr/1.5/Kishi_Bashi_-_It_All_Began_With_a_Burst.ogg',
-                        type:   'audio/ogg'
-                    }]
-                });
-                break;
-
-            case types.youtube:
-                player.source({
-                    type:       'video',
-                    title:      'View From A Blue Moon',
-                    sources: [{
-                        src:    'bTqVqk7FSmY',
-                        type:   'youtube'
-                    }]
-                });
-                break;
-
-            case types.vimeo:
-                player.source({
-                    type:       'video',
-                    title:      'View From A Blue Moon',
-                    sources: [{
-                        src:    '143418951',
-                        type:   'vimeo'
+                    }, {
+                        kind:   'captions',
+                        label:  'Spanish',
+                        srclang:'es',
+                        src:    'https://player.vimeo.com/texttrack/171.vtt?token=1479908430_0x78888488ee8a4848ad9890f8cada53d954cd2326'
                     }]
                 });
                 break;

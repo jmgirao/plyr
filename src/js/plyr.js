@@ -87,6 +87,7 @@
                 played:         '.plyr__progress--played'
             },
             captions:           '.plyr__captions',
+            captionList:        '.caption-list',
             currentTime:        '.plyr__time--current',
             duration:           '.plyr__time--duration'
         },
@@ -880,11 +881,12 @@
             // Toggle captions button
             if (_inArray(config.controls, 'captions')) {
                 html.push(
-                    '<button type="button" data-plyr="captions">',
+                    '<button type="button" class="btn-caption">',
                         '<svg class="icon--captions-on"><use xlink:href="' + iconPath + '-captions-on" /></svg>',
                         '<svg><use xlink:href="' + iconPath+ '-captions-off" /></svg>',
                         '<span class="plyr__sr-only">' + config.i18n.toggleCaptions + '</span>',
-                    '</button>'
+                    '</button>',
+                    '<ul class="caption-list"></ul>'
                 );
             }
 
@@ -903,6 +905,26 @@
             html.push('</div>');
 
             return html.join('');
+        }
+
+        // Build menu for captions
+        function _buildCaptionsList() {
+            var captionListHtml = _getElement(defaults.selectors.captionList);
+            var tracks = plyr.media.textTracks;
+
+            captionListHtml.innerHTML = '';
+
+            for (var i = 0; i < tracks.length; i++) {
+                captionListHtml.innerHTML += '<li>' +
+                '<input type="radio" id="caption_' + tracks[i].language + '" name="caption" class="caption-option" data-plyr="captions" value="' + tracks[i].language + '" style="display:block"/>' +
+                '<label for="caption_' + tracks[i].language + '">' + tracks[i].label + '</label>' +
+                '</li>';
+            }
+
+            captionListHtml.innerHTML += '<li>' +
+            '<input type="radio" id="caption_off" name="caption" class="caption-option" data-plyr="captions" value="off" style="display:block"/>' +
+            '<label for="caption_off">Off</label>' +
+            '</li>';
         }
 
         // Setup fullscreen
@@ -946,33 +968,22 @@
                 plyr.videoContainer.insertAdjacentHTML('afterbegin', '<div class="' + _getClassname(config.selectors.captions) + '"></div>');
             }
 
+            var tracks = plyr.media.textTracks;
+
             // Determine if HTML5 textTracks is supported
             plyr.usingTextTracks = false;
-            if (plyr.media.textTracks) {
+            if (tracks) {
                 plyr.usingTextTracks = true;
             }
 
-            // Get URL of caption file if exists
-            var captionSrc = '',
-                kind,
-                children = plyr.media.childNodes;
-
-            for (var i = 0; i < children.length; i++) {
-                if (children[i].nodeName.toLowerCase() === 'track') {
-                    kind = children[i].kind;
-                    if (kind === 'captions' || kind === 'subtitles') {
-                        captionSrc = children[i].getAttribute('src');
-                    }
-                }
-            }
 
             // Record if caption file exists or not
             plyr.captionExists = true;
-            if (captionSrc === '') {
+            if (!tracks.length) {
                 plyr.captionExists = false;
                 _log('No caption track found');
             } else {
-                _log('Caption track found; URI: ' + captionSrc);
+                _log('Caption track found;');
             }
 
             // If no caption file exists, hide container for caption text
@@ -981,7 +992,6 @@
             } else {
                 // Turn off native caption rendering to avoid double captions
                 // This doesn't seem to work in Safari 7+, so the <track> elements are removed from the dom below
-                var tracks = plyr.media.textTracks;
                 for (var x = 0; x < tracks.length; x++) {
                     tracks[x].mode = 'hidden';
                 }
@@ -1010,14 +1020,7 @@
                         var track = tracks[y];
 
                         if (track.kind === 'captions' || track.kind === 'subtitles') {
-                            _on(track, 'cuechange', function() {
-                                // Display a cue, if there is one
-                                if (this.activeCues[0] && 'text' in this.activeCues[0]) {
-                                    _setCaption(this.activeCues[0].getCueAsHTML());
-                                } else {
-                                    _setCaption();
-                                }
-                            });
+                            _on(track, 'cuechange', handleCuesUpdate);
                         }
                     }
                 } else {
@@ -1205,7 +1208,7 @@
 
             if (active) {
                 _toggleClass(plyr.container, config.classes.captions.active, true);
-                _toggleState(plyr.buttons.captions, true);
+                //_toggleState(plyr.buttons.captions, true);
             }
         }
 
@@ -1343,7 +1346,7 @@
 
                 // Inputs
                 plyr.buttons.mute             = _getElement(config.selectors.buttons.mute);
-                plyr.buttons.captions         = _getElement(config.selectors.buttons.captions);
+                plyr.buttons.captions         = _getElements(config.selectors.buttons.captions);
 
                 // Progress
                 plyr.progress = {};
@@ -2322,7 +2325,10 @@
         }
 
         // Toggle captions
-        function _toggleCaptions(show) {
+        function _toggleCaptions(evt) {
+            var srclang = evt.target.value;
+            var show = evt.target.value !== 'off';
+
             // If there's no full support, or there's no caption toggle
             if (!plyr.supported.full || !plyr.buttons.captions) {
                 return;
@@ -2333,11 +2339,31 @@
                 show = (plyr.container.className.indexOf(config.classes.captions.active) === -1);
             }
 
+            if(show) {
+                var tracks = plyr.media.textTracks;
+
+                for (var i = 0; i < tracks.length; i++) {
+                    if (tracks[i].enabled) {
+                        tracks[i].enabled = false;
+                        _toggleListener(tracks[i], 'cuechange', handleCuesUpdate, false);
+                    } else if (tracks[i].language === srclang) {
+                        tracks[i].enabled = true;
+                        if (tracks[i].activeCues[0] && 'text' in tracks[i].activeCues[0]) {
+                            _setCaption(tracks[i].activeCues[0].getCueAsHTML());
+                        } else {
+                            _setCaption();
+                        }
+
+                        _on(tracks[i], 'cuechange', handleCuesUpdate);
+                    }
+                }
+            }
+
             // Set global
             plyr.captionsEnabled = show;
 
             // Toggle state
-            _toggleState(plyr.buttons.captions, plyr.captionsEnabled);
+            _toggleState(evt.target, plyr.captionsEnabled);
 
             // Add class hook
             _toggleClass(plyr.container, config.classes.captions.active, plyr.captionsEnabled);
@@ -2347,6 +2373,16 @@
 
             // Save captions state to localStorage
             _updateStorage({captionsEnabled: plyr.captionsEnabled});
+        }
+
+        // change cues
+        function handleCuesUpdate() {
+            // Display a cue, if there is one
+            if (this.activeCues[0] && 'text' in this.activeCues[0]) {
+                _setCaption(this.activeCues[0].getCueAsHTML());
+            } else {
+                _setCaption();
+            }
         }
 
         // Check if media is loading
@@ -2994,7 +3030,7 @@
                         // F key
                         case 70: _toggleFullscreen(); break;
                         // C key
-                        case 67: if (!held) { _toggleCaptions(); } break;
+                        //case 67: if (!held) { _openCaptions(); } break;
                     }
 
                     // Escape is handle natively when in full screen
@@ -3063,9 +3099,6 @@
             if (fullscreen.supportsFullScreen) {
                 _on(document, fullscreen.fullScreenEventName, _toggleFullscreen);
             }
-
-            // Captions
-            _on(plyr.buttons.captions, 'click', _toggleCaptions);
 
             // Seek tooltip
             _on(plyr.progress.container, 'mouseenter mouseleave mousemove', _updateSeekTooltip);
@@ -3409,6 +3442,13 @@
                 _injectControls();
             }
 
+            // Build caption list
+            // When the setup function is called there's no tracks yet.
+            // only when the source function is called.
+            if(plyr.media.textTracks.length) {
+                _buildCaptionsList();
+            }
+
             // Find the elements
             if (!_findElements()) {
                 return;
@@ -3417,6 +3457,13 @@
             // If the controls are injected, re-bind listeners for controls
             if (controlsMissing) {
                 _controlListeners();
+            }
+
+            // create change listener for the captions
+            // The elements must be founded in the DOM first to the change listener be associated.
+            // Depends on the functions _buildCaptionsList() and _findElements()
+            if(plyr.media.textTracks.length) {
+                _on(plyr.buttons.captions, 'change', _toggleCaptions);
             }
 
             // Media element listeners
