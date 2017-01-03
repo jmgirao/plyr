@@ -886,7 +886,7 @@
                         '<svg><use xlink:href="' + iconPath+ '-captions-off" /></svg>',
                         '<span class="plyr__sr-only">' + config.i18n.toggleCaptions + '</span>',
                     '</button>',
-                    '<ul class="caption-list"></ul>'
+                    '<ul class="caption-list caption-list-opened"></ul>'
                 );
             }
 
@@ -996,9 +996,6 @@
                     tracks[x].mode = 'hidden';
                 }
 
-                // Enable UI
-                _showCaptions(plyr);
-
                 // Disable unsupported browsers than report false positive
                 // Firefox bug: https://bugzilla.mozilla.org/show_bug.cgi?id=1033144
                 if ((plyr.browser.isIE && plyr.browser.version >= 10) ||
@@ -1015,14 +1012,6 @@
                 // Native support required - http://caniuse.com/webvtt
                 if (plyr.usingTextTracks) {
                     _log('TextTracks supported');
-
-                    for (var y = 0; y < tracks.length; y++) {
-                        var track = tracks[y];
-
-                        if (track.kind === 'captions' || track.kind === 'subtitles') {
-                            _on(track, 'cuechange', handleCuesUpdate);
-                        }
-                    }
                 } else {
                     // Caption tracks not natively supported
                     _log('TextTracks not supported so rendering captions manually');
@@ -1093,7 +1082,9 @@
         function _setCaption(caption) {
             /* jshint unused:false */
             var container = _getElement(config.selectors.captions),
-                content = document.createElement('span');
+                content = document.createElement('div');
+
+            content.classList.add('plyr__captions__container');
 
             // Empty the container
             container.innerHTML = '';
