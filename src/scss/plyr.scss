@@ -322,6 +322,56 @@
         display: none;
     }
 
+    .plyr__captions__control {
+        position: relative;
+        margin-left: 10px;
+    }
+
+    .plyr__captions__list {
+        font-size: 14px;
+        display: none;
+        background-color: rgba(255,255,255,.25);
+        border-radius: 3px;
+        position: absolute;
+        bottom: 45px;
+
+        &.plyr__captions__list--open {
+            display: block;
+        }
+
+        & li {
+            text-align: left;
+
+            &:first-child input[type="radio"] + label {
+                border-top-left-radius: 3px;
+                border-top-right-radius: 3px;
+            }
+
+            &:last-child input[type="radio"] + label {
+                border-bottom-left-radius: 3px;
+                border-bottom-right-radius: 3px;
+            }
+        }
+
+        input[type="radio"] {
+            display: none;
+        }
+
+        input[type="radio"] + label {
+            display: block;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+
+        input[type="radio"]:checked + label {
+            background-color: #3498db;
+        }
+
+        input[type="radio"]:not(:checked) + label:hover {
+            background-color: rgba(255,255,255,.5);
+        }
+    }
+
     @media (min-width: $plyr-bp-screen-sm) {
         > button,
         .plyr__progress,

@@ -75,6 +75,7 @@
                 forward:        '[data-plyr="fast-forward"]',
                 mute:           '[data-plyr="mute"]',
                 captions:       '[data-plyr="captions"]',
+                captionMenu:    '.btn-toggle-caption',
                 fullscreen:     '[data-plyr="fullscreen"]'
             },
             volume: {
@@ -87,7 +88,7 @@
                 played:         '.plyr__progress--played'
             },
             captions:           '.plyr__captions',
-            captionList:        '.caption-list',
+            captionList:        '.plyr__captions__list',
             currentTime:        '.plyr__time--current',
             duration:           '.plyr__time--duration'
         },
@@ -108,6 +109,7 @@
             isIos:              'plyr--is-ios',
             isTouch:            'plyr--is-touch',
             captions: {
+                openList:       'plyr__captions__list--open',
                 enabled:        'plyr--captions-enabled',
                 active:         'plyr--captions-active'
             },
@@ -882,12 +884,14 @@
             // Toggle captions button
             if (_inArray(config.controls, 'captions')) {
                 html.push(
-                    '<button type="button" class="btn-caption">',
-                        '<svg class="icon--captions-on"><use xlink:href="' + iconPath + '-captions-on" /></svg>',
-                        '<svg><use xlink:href="' + iconPath+ '-captions-off" /></svg>',
-                        '<span class="plyr__sr-only">' + config.i18n.toggleCaptions + '</span>',
-                    '</button>',
-                    '<ul class="caption-list caption-list-opened"></ul>'
+                    '<div class="plyr__captions__control">',
+                        '<button type="button" class="btn-toggle-caption">',
+                            '<svg class="icon--captions-on"><use xlink:href="' + iconPath + '-captions-on" /></svg>',
+                            '<svg><use xlink:href="' + iconPath+ '-captions-off" /></svg>',
+                            '<span class="plyr__sr-only">' + config.i18n.toggleCaptions + '</span>',
+                        '</button>',
+                        '<ul class="plyr__captions__list"></ul>',
+                    '</div>'
                 );
             }
 
@@ -923,7 +927,7 @@
             }
 
             captionListHtml.innerHTML += '<li>' +
-            '<input type="radio" id="caption_off" name="caption" class="caption-option" data-plyr="captions" value="off"/>' +
+            '<input type="radio" id="caption_off" name="caption" class="caption-option" data-plyr="captions" value="off" checked/>' +
             '<label for="caption_off">' + config.i18n.captionOff + '</label>' +
             '</li>';
         }
@@ -1361,7 +1365,11 @@
 
                 // Inputs
                 plyr.buttons.mute             = _getElement(config.selectors.buttons.mute);
+
+                // Captions
                 plyr.buttons.captions         = _getElements(config.selectors.buttons.captions);
+                plyr.buttons.captionMenu      = _getElement(config.selectors.buttons.captionMenu);
+                plyr.captionList              = _getElement(config.selectors.captionList);
 
                 // Progress
                 plyr.progress = {};
@@ -2339,6 +2347,12 @@
             }
         }
 
+        // Toggle caption menu
+        function _toggleCaptionMenu(event) {
+            event.stopPropagation();
+            plyr.captionList.classList.toggle(config.classes.captions.openList);
+        }
+
         // Toggle captions
         function _toggleCaptions(evt) {
             var srclang = evt.target.value;
@@ -3062,7 +3076,7 @@
                         // F key
                         case 70: _toggleFullscreen(); break;
                         // C key
-                        //case 67: if (!held) { _openCaptions(); } break;
+                        case 67: if (!held) { _toggleCaptionMenu(); } break;
                     }
 
                     // Escape is handle natively when in full screen
@@ -3089,6 +3103,7 @@
             });
             _on(document.body, 'click', function() {
                 _toggleClass(_getElement('.' + config.classes.tabFocus), config.classes.tabFocus, false);
+                plyr.captionList.classList.remove(config.classes.captions.openList);
             });
             for (var button in plyr.buttons) {
                 var element = plyr.buttons[button];
@@ -3497,6 +3512,7 @@
             // Depends on the functions _buildCaptionsList() and _findElements()
             if(plyr.media.textTracks && plyr.media.textTracks.length) {
                 _on(plyr.buttons.captions, 'change', _toggleCaptions);
+                _on(plyr.buttons.captionMenu, 'click', _toggleCaptionMenu);
             }
 
             // Media element listeners
