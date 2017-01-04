@@ -1,5 +1,8 @@
 # Changelog
 
+##v2.1.0
+- Add multiple tracks
+
 ## v2.0.11
 - Fix for `cleanUp` being called twice (thanks to @sebastiancarlsson)
 - Fix for YouTube controls on iPad (fixes #391)
