@@ -233,6 +233,7 @@
         box-decoration-break: clone;
         line-height: 150%;
         display: inline-block;
+        white-space: pre-line;
     }
     .plyr__captions__container:empty {
         display: none;

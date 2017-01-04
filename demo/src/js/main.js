@@ -19,7 +19,7 @@
             controls:       true
         },
         captions: {
-            defaultActive:  true
+            defaultActive:  false
         }
     });
     plyr.loadSprite('dist/demo.svg');
@@ -126,6 +126,12 @@
                         label:  'Spanish',
                         srclang:'es',
                         src:    'https://player.vimeo.com/texttrack/171.vtt?token=1479908430_0x78888488ee8a4848ad9890f8cada53d954cd2326'
+                    }, {
+                        kind:   'captions',
+                        label:  'English',
+                        srclang:'en',
+                        src:    'https://cdn.selz.com/plyr/1.5/View_From_A_Blue_Moon_Trailer-HD.en.vtt',
+                        default: true
                     }]
                 });
                 break;

@@ -144,7 +144,8 @@
             toggleMute:         'Toggle Mute',
             toggleCaptions:     'Toggle Captions',
             toggleFullscreen:   'Toggle Fullscreen',
-            frameTitle:         'Player for {title}'
+            frameTitle:         'Player for {title}',
+            captionOff:         'Off'
         },
         types: {
             embed:              ['youtube', 'vimeo', 'soundcloud'],
@@ -923,7 +924,7 @@
 
             captionListHtml.innerHTML += '<li>' +
             '<input type="radio" id="caption_off" name="caption" class="caption-option" data-plyr="captions" value="off" style="display:block"/>' +
-            '<label for="caption_off">Off</label>' +
+            '<label for="caption_off">' + config.i18n.captionOff + '</label>' +
             '</li>';
         }
 
@@ -971,18 +972,15 @@
             var tracks = plyr.media.textTracks;
 
             // Determine if HTML5 textTracks is supported
-            plyr.usingTextTracks = false;
-            if (tracks) {
-                plyr.usingTextTracks = true;
-            }
-
-
             // Record if caption file exists or not
+            plyr.usingTextTracks = false;
             plyr.captionExists = true;
-            if (!tracks.length) {
+
+            if (!tracks || !tracks.length) {
                 plyr.captionExists = false;
                 _log('No caption track found');
             } else {
+                plyr.usingTextTracks = true;
                 _log('Caption track found;');
             }
 
@@ -997,9 +995,8 @@
                 }
 
                 // Disable unsupported browsers than report false positive
-                // Firefox bug: https://bugzilla.mozilla.org/show_bug.cgi?id=1033144
-                if ((plyr.browser.isIE && plyr.browser.version >= 10) ||
-                    (plyr.browser.isFirefox && plyr.browser.version >= 31)) {
+                // Firefox bug: https://bugzilla.mozilla.org/show_bug.cgi?id=1033144: RESOLVED FIXED
+                if ((plyr.browser.isIE && plyr.browser.version >= 10)) {
 
                     // Debugging
                     _log('Detected browser with known TextTrack issues - using manual fallback');
@@ -1016,63 +1013,86 @@
                     // Caption tracks not natively supported
                     _log('TextTracks not supported so rendering captions manually');
 
-                    // Render captions from array at appropriate time
-                    plyr.currentCaption = '';
-                    plyr.captions = [];
+                    getCaptionsXHR();
 
-                    if (captionSrc !== '') {
+                }
+            }
+        }
+
+        function getCaptionsXHR() {
+            // Render captions from array at appropriate time
+            plyr.currentCaption = '';
+            plyr.captions = {};
+
+            // Get URL of caption file if exists
+            var captionSrc = '',
+              srcLanguage = '',
+              children = plyr.media.childNodes;
+
+            for (var i = 0; i < children.length; i++) {
+                if (children[i].nodeName.toLowerCase() === 'track') {
+                    if (children[i].kind === 'captions' || children[i].kind === 'subtitles' ) {
+                        captionSrc = children[i].getAttribute('src');
+                        srcLanguage = children[i].getAttribute('srclang');
+
+                        plyr.captions[srcLanguage] = [];
+
                         // Create XMLHttpRequest Object
                         var xhr = new XMLHttpRequest();
 
-                        xhr.onreadystatechange = function() {
-                            if (xhr.readyState === 4) {
-                                if (xhr.status === 200) {
-                                    var captions = [],
-                                        caption,
-                                        req = xhr.responseText;
-
-                                    //According to webvtt spec, line terminator consists of one of the following
-                                    // CRLF (U+000D U+000A), LF (U+000A) or CR (U+000D)
-                                    var lineSeparator = '\r\n';
-                                    if(req.indexOf(lineSeparator+lineSeparator) === -1) {
-                                        if(req.indexOf('\r\r') !== -1){
-                                            lineSeparator = '\r';
-                                        } else {
-                                            lineSeparator = '\n';
-                                        }
-                                    }
-
-                                    captions = req.split(lineSeparator+lineSeparator);
-
-                                    for (var r = 0; r < captions.length; r++) {
-                                        caption = captions[r];
-                                        plyr.captions[r] = [];
-
-                                        // Get the parts of the captions
-                                        var parts = caption.split(lineSeparator),
-                                            index = 0;
-
-                                        // Incase caption numbers are added
-                                        if (parts[index].indexOf(":") === -1) {
-                                            index = 1;
-                                        }
-
-                                        plyr.captions[r] = [parts[index], parts[index + 1]];
-                                    }
-
-                                    // Remove first element ('VTT')
-                                    plyr.captions.shift();
-
-                                    _log('Successfully loaded the caption file via AJAX');
-                                } else {
-                                    _warn(config.logPrefix + 'There was a problem loading the caption file via AJAX');
-                                }
-                            }
-                        };
+                        xhr.onreadystatechange = handleGetCaption(xhr, srcLanguage);
 
                         xhr.open('get', captionSrc, true);
 
                         xhr.send();
+                    }
+                }
+            }
+        }
+
+        function handleGetCaption(xhr, srcLanguage) {
+            return function() {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        var captions = [],
+                          caption,
+                          req = xhr.responseText;
+
+                        //According to webvtt spec, line terminator consists of one of the following
+                        // CRLF (U+000D U+000A), LF (U+000A) or CR (U+000D)
+                        var lineSeparator = '\r\n';
+                        if(req.indexOf(lineSeparator+lineSeparator) === -1) {
+                            if(req.indexOf('\r\r') !== -1){
+                                lineSeparator = '\r';
+                            } else {
+                                lineSeparator = '\n';
+                            }
+                        }
+
+                        captions = req.split(lineSeparator+lineSeparator);
+
+                        for (var r = 0; r < captions.length; r++) {
+                            caption = captions[r];
+                            plyr.captions[srcLanguage][r] = [];
+
+                            // Get the parts of the captions
+                            var parts = caption.split(lineSeparator),
+                              index = 0;
+
+                            // Incase caption numbers are added
+                            if (parts[index].indexOf(":") === -1) {
+                                index = 1;
+                            }
+
+                            parts[index] = parts[index] ? parts[index] : '';
+                            parts[index + 1] = parts[index + 1] ? parts[index + 1] : '';
+
+                            plyr.captions[srcLanguage][r] = [parts[index], parts[index + 1]];
+                        }
+
+                        _log('Successfully loaded the caption file via AJAX');
+                    } else {
+                        _warn(config.logPrefix + 'There was a problem loading the caption file via AJAX');
                     }
                 }
             }
@@ -1147,6 +1167,10 @@
                 return;
             }
 
+            if(!plyr.captionLangSelected || plyr.captionLangSelected === '' || !plyr.captions[plyr.captionLangSelected].length) {
+                return;
+            }
+
             // Reset subcount
             plyr.subcount = 0;
 
@@ -1156,22 +1180,22 @@
             time = _is.number(time) ? time : plyr.media.currentTime;
 
             // If there's no subs available, bail
-            if (!plyr.captions[plyr.subcount]) {
+            if (!plyr.captions[plyr.captionLangSelected][plyr.subcount]) {
                 return;
             }
 
-            while (_timecodeMax(plyr.captions[plyr.subcount][0]) < time.toFixed(1)) {
+            while (_timecodeMax(plyr.captions[plyr.captionLangSelected][plyr.subcount][0]) < time.toFixed(1)) {
                 plyr.subcount++;
-                if (plyr.subcount > plyr.captions.length - 1) {
-                    plyr.subcount = plyr.captions.length - 1;
+                if (plyr.subcount > plyr.captions[plyr.captionLangSelected].length - 1) {
+                    plyr.subcount = plyr.captions[plyr.captionLangSelected].length - 1;
                     break;
                 }
             }
 
             // Check if the next caption is in the current time range
-            if (plyr.media.currentTime.toFixed(1) >= _timecodeMin(plyr.captions[plyr.subcount][0]) &&
-                plyr.media.currentTime.toFixed(1) <= _timecodeMax(plyr.captions[plyr.subcount][0])) {
-                    plyr.currentCaption = plyr.captions[plyr.subcount][1];
+            if (plyr.media.currentTime.toFixed(1) >= _timecodeMin(plyr.captions[plyr.captionLangSelected][plyr.subcount][0]) &&
+                plyr.media.currentTime.toFixed(1) <= _timecodeMax(plyr.captions[plyr.captionLangSelected][plyr.subcount][0])) {
+                    plyr.currentCaption = plyr.captions[plyr.captionLangSelected][plyr.subcount][1];
 
                 // Render the caption
                 _setCaption(plyr.currentCaption);
@@ -2319,6 +2343,7 @@
         function _toggleCaptions(evt) {
             var srclang = evt.target.value;
             var show = evt.target.value !== 'off';
+            var tracks = plyr.media.textTracks;
 
             // If there's no full support, or there's no caption toggle
             if (!plyr.supported.full || !plyr.buttons.captions) {
@@ -2331,24 +2356,40 @@
             }
 
             if(show) {
-                var tracks = plyr.media.textTracks;
+                plyr.captionLangSelected = srclang;
+
+                if(plyr.usingTextTracks) {
+                    for (var i = 0; i < tracks.length; i++) {
+                        if (tracks[i].enabled) {
+                            tracks[i].enabled = false;
+                            _toggleListener(tracks[i], 'cuechange', handleCuesUpdate, false);
+
+                        } else if (tracks[i].language === srclang) {
+                            tracks[i].enabled = true;
+
+                            if (tracks[i].activeCues[0] && 'text' in tracks[i].activeCues[0]) {
+                                _setCaption(tracks[i].activeCues[0].getCueAsHTML());
+                            } else {
+                                _setCaption();
+                            }
+
+                            _on(tracks[i], 'cuechange', handleCuesUpdate);
+                        }
+                    }
+                } else {
+                    _seekManualCaptions(plyr.media.currentTime);
+                }
+            } else {
+                plyr.captionLangSelected = undefined;
 
                 for (var i = 0; i < tracks.length; i++) {
                     if (tracks[i].enabled) {
                         tracks[i].enabled = false;
                         _toggleListener(tracks[i], 'cuechange', handleCuesUpdate, false);
-                    } else if (tracks[i].language === srclang) {
-                        tracks[i].enabled = true;
-                        if (tracks[i].activeCues[0] && 'text' in tracks[i].activeCues[0]) {
-                            _setCaption(tracks[i].activeCues[0].getCueAsHTML());
-                        } else {
-                            _setCaption();
-                        }
-
-                        _on(tracks[i], 'cuechange', handleCuesUpdate);
                     }
                 }
             }
+
 
             // Set global
             plyr.captionsEnabled = show;
@@ -3146,6 +3187,7 @@
         function _mediaListeners() {
             // Time change on media
             _on(plyr.media, 'timeupdate seeking', _timeUpdate);
+
 
             // Update manual captions
             _on(plyr.media, 'timeupdate', _seekManualCaptions);
