@@ -917,13 +917,13 @@
 
             for (var i = 0; i < tracks.length; i++) {
                 captionListHtml.innerHTML += '<li>' +
-                '<input type="radio" id="caption_' + tracks[i].language + '" name="caption" class="caption-option" data-plyr="captions" value="' + tracks[i].language + '" style="display:block"/>' +
+                '<input type="radio" id="caption_' + tracks[i].language + '" name="caption" class="caption-option" data-plyr="captions" value="' + tracks[i].language + '"/>' +
                 '<label for="caption_' + tracks[i].language + '">' + tracks[i].label + '</label>' +
                 '</li>';
             }
 
             captionListHtml.innerHTML += '<li>' +
-            '<input type="radio" id="caption_off" name="caption" class="caption-option" data-plyr="captions" value="off" style="display:block"/>' +
+            '<input type="radio" id="caption_off" name="caption" class="caption-option" data-plyr="captions" value="off"/>' +
             '<label for="caption_off">' + config.i18n.captionOff + '</label>' +
             '</li>';
         }

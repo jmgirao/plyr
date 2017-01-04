@@ -227,14 +227,17 @@
     text-align: center;
     font-weight: 400;
 
-    span {
+    .plyr__captions__container {
         border-radius: 2px;
         padding: floor(@plyr-control-spacing / 3) @plyr-control-spacing;
         background: @plyr-captions-bg;
         box-decoration-break: clone;
         line-height: 150%;
+        display: inline-block;
+        white-space: pre-line;
     }
-    span:empty {
+
+    .plyr__captions__container:empty {
         display: none;
     }
 
@@ -438,7 +441,6 @@
 }
 
 // Some options are hidden by default
-.plyr [data-plyr='captions'],
 .plyr [data-plyr='fullscreen'] {
     display: none;
 }
