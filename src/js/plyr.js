@@ -3534,15 +3534,16 @@
             // Captions
             _setupCaptions();
 
-            // Build caption list
-            // When the setup function is called there's no tracks yet.
-            // only when the source function is called.
-            _buildCaptionsList();
 
-            // create change listener for the captions
-            // The elements must be founded in the DOM first to the change listener be associated.
-            // Depends on the functions _buildCaptionsList() and _findElements()
             if(plyr.captionExists) {
+                // Build caption list
+                // When the setup function is called there's no tracks yet.
+                // only when the source function is called.
+                _buildCaptionsList();
+
+                // create change listener for the captions
+                // The elements must be founded in the DOM first to the change listener be associated.
+                // Depends on the functions _buildCaptionsList() and _findElements()
                 _on(plyr.buttons.captions, 'change', _toggleCaptions);
                 _on(plyr.buttons.captionMenu, 'click', _toggleCaptionMenu);
             }
