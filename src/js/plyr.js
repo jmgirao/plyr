@@ -919,17 +919,29 @@
 
             captionListHtml.innerHTML = '';
 
-            for (var i = 0; i < tracks.length; i++) {
-                captionListHtml.innerHTML += '<li>' +
-                '<input type="radio" id="caption_' + tracks[i].language + '" name="caption" class="caption-option" data-plyr="captions" value="' + tracks[i].language + '"/>' +
-                '<label for="caption_' + tracks[i].language + '">' + tracks[i].label + '</label>' +
-                '</li>';
+            if(tracks && tracks.length && plyr.usingTextTracks) {
+
+                for (var i = 0; i < tracks.length; i++) {
+                    captionListHtml.innerHTML += '<li>' +
+                    '<input type="radio" id="caption_' + tracks[i].language + '" name="caption" class="caption-option" data-plyr="captions" value="' + tracks[i].language + '"/>' +
+                    '<label for="caption_' + tracks[i].language + '">' + tracks[i].label + '</label>' +
+                    '</li>';
+                }
+            } else if(!plyr.usingTextTracks) {
+                for (var i = 0; i < plyr.htmlCaptions.length; i++) {
+                    captionListHtml.innerHTML += '<li>' +
+                    '<input type="radio" id="caption_' + plyr.htmlCaptions[i].srclang + '" name="caption" class="caption-option" data-plyr="captions" value="' + plyr.htmlCaptions[i].srclang + '"/>' +
+                    '<label for="caption_' + plyr.htmlCaptions[i].srclang + '">' + plyr.htmlCaptions[i].label + '</label>' +
+                    '</li>';
+                }
             }
 
             captionListHtml.innerHTML += '<li>' +
             '<input type="radio" id="caption_off" name="caption" class="caption-option" data-plyr="captions" value="off" checked/>' +
             '<label for="caption_off">' + config.i18n.captionOff + '</label>' +
             '</li>';
+
+            plyr.buttons.captions = _getElements(config.selectors.buttons.captions);
         }
 
         // Setup fullscreen
@@ -973,18 +985,34 @@
                 plyr.videoContainer.insertAdjacentHTML('afterbegin', '<div class="' + _getClassname(config.selectors.captions) + '"></div>');
             }
 
+            plyr.htmlCaptions = _getHTMLTracks();
+
             var tracks = plyr.media.textTracks;
 
             // Determine if HTML5 textTracks is supported
             // Record if caption file exists or not
-            plyr.usingTextTracks = false;
+            plyr.usingTextTracks = true;
             plyr.captionExists = true;
 
-            if (!tracks || !tracks.length) {
+            // Disable unsupported browsers than report false positive
+            // Firefox bug: https://bugzilla.mozilla.org/show_bug.cgi?id=1033144: RESOLVED FIXED
+            if ((plyr.browser.isIE && plyr.browser.version >= 10) ||
+              (plyr.browser.isFirefox && plyr.browser.version >= 31 && plyr.browser.version < 50)) {
+
+                // Debugging
+                _log('Detected browser with known TextTrack issues - using manual fallback');
+
+                // Set to false so skips to 'manual' captioning
+                plyr.usingTextTracks = false;
+            }
+
+            if ((!tracks || !tracks.length) && plyr.usingTextTracks) {
+                plyr.captionExists = false;
+                _log('No caption track found');
+            } else if((!plyr.htmlCaptions || !plyr.htmlCaptions.length) && !plyr.usingTextTracks){
                 plyr.captionExists = false;
                 _log('No caption track found');
             } else {
-                plyr.usingTextTracks = true;
                 _log('Caption track found;');
             }
 
@@ -996,17 +1024,6 @@
                 // This doesn't seem to work in Safari 7+, so the <track> elements are removed from the dom below
                 for (var x = 0; x < tracks.length; x++) {
                     tracks[x].mode = 'hidden';
-                }
-
-                // Disable unsupported browsers than report false positive
-                // Firefox bug: https://bugzilla.mozilla.org/show_bug.cgi?id=1033144: RESOLVED FIXED
-                if ((plyr.browser.isIE && plyr.browser.version >= 10)) {
-
-                    // Debugging
-                    _log('Detected browser with known TextTrack issues - using manual fallback');
-
-                    // Set to false so skips to 'manual' captioning
-                    plyr.usingTextTracks = false;
                 }
 
                 // Rendering caption tracks
@@ -1023,34 +1040,40 @@
             }
         }
 
+        function _getHTMLTracks() {
+            var children = plyr.media.childNodes;
+            var htmlCaptions = [];
+
+            for (var i = 0; i < children.length; i++) {
+                if (children[i].nodeName.toLowerCase() === 'track') {
+                    if (children[i].kind === 'captions' || children[i].kind === 'subtitles') {
+                        htmlCaptions.push({
+                            src: children[i].src,
+                            srclang: children[i].srclang,
+                            kind: children[i].kind,
+                            label: children[i].label
+                        });
+                    }
+                }
+            }
+
+            return htmlCaptions;
+        }
+
         function getCaptionsXHR() {
             // Render captions from array at appropriate time
             plyr.currentCaption = '';
             plyr.captions = {};
 
-            // Get URL of caption file if exists
-            var captionSrc = '',
-              srcLanguage = '',
-              children = plyr.media.childNodes;
+            for (var i = 0; i < plyr.htmlCaptions.length; i++) {
 
-            for (var i = 0; i < children.length; i++) {
-                if (children[i].nodeName.toLowerCase() === 'track') {
-                    if (children[i].kind === 'captions' || children[i].kind === 'subtitles' ) {
-                        captionSrc = children[i].getAttribute('src');
-                        srcLanguage = children[i].getAttribute('srclang');
+                plyr.captions[plyr.htmlCaptions[i].srclang] = [];
 
-                        plyr.captions[srcLanguage] = [];
-
-                        // Create XMLHttpRequest Object
-                        var xhr = new XMLHttpRequest();
-
-                        xhr.onreadystatechange = handleGetCaption(xhr, srcLanguage);
-
-                        xhr.open('get', captionSrc, true);
-
-                        xhr.send();
-                    }
-                }
+                // Create XMLHttpRequest Object
+                var xhr = new XMLHttpRequest();
+                xhr.onreadystatechange = handleGetCaption(xhr, plyr.htmlCaptions[i].srclang);
+                xhr.open('get', plyr.htmlCaptions[i].src, true);
+                xhr.send();
             }
         }
 
@@ -1367,7 +1390,6 @@
                 plyr.buttons.mute             = _getElement(config.selectors.buttons.mute);
 
                 // Captions
-                plyr.buttons.captions         = _getElements(config.selectors.buttons.captions);
                 plyr.buttons.captionMenu      = _getElement(config.selectors.buttons.captionMenu);
                 plyr.captionList              = _getElement(config.selectors.captionList);
 
@@ -3490,13 +3512,6 @@
                 _injectControls();
             }
 
-            // Build caption list
-            // When the setup function is called there's no tracks yet.
-            // only when the source function is called.
-            if(plyr.media.textTracks && plyr.media.textTracks.length) {
-                _buildCaptionsList();
-            }
-
             // Find the elements
             if (!_findElements()) {
                 return;
@@ -3505,14 +3520,6 @@
             // If the controls are injected, re-bind listeners for controls
             if (controlsMissing) {
                 _controlListeners();
-            }
-
-            // create change listener for the captions
-            // The elements must be founded in the DOM first to the change listener be associated.
-            // Depends on the functions _buildCaptionsList() and _findElements()
-            if(plyr.media.textTracks && plyr.media.textTracks.length) {
-                _on(plyr.buttons.captions, 'change', _toggleCaptions);
-                _on(plyr.buttons.captionMenu, 'click', _toggleCaptionMenu);
             }
 
             // Media element listeners
@@ -3526,6 +3533,19 @@
 
             // Captions
             _setupCaptions();
+
+            // Build caption list
+            // When the setup function is called there's no tracks yet.
+            // only when the source function is called.
+            _buildCaptionsList();
+
+            // create change listener for the captions
+            // The elements must be founded in the DOM first to the change listener be associated.
+            // Depends on the functions _buildCaptionsList() and _findElements()
+            if(plyr.captionExists) {
+                _on(plyr.buttons.captions, 'change', _toggleCaptions);
+                _on(plyr.buttons.captionMenu, 'click', _toggleCaptionMenu);
+            }
 
             // Set volume
             _setVolume();
