@@ -995,7 +995,8 @@
             plyr.captionExists = true;
 
             // Disable unsupported browsers than report false positive
-            // Firefox bug: https://bugzilla.mozilla.org/show_bug.cgi?id=1033144: RESOLVED FIXED
+            // Firefox bug: https://bugzilla.mozilla.org/show_bug.cgi?id=1033144
+            // Firefox bug: https://bugzilla.mozilla.org/show_bug.cgi?id=1281418: FIXED ON 50 VERSION
             if ((plyr.browser.isIE && plyr.browser.version >= 10) ||
               (plyr.browser.isFirefox && plyr.browser.version >= 31 && plyr.browser.version < 50)) {
 
@@ -2394,7 +2395,7 @@
             if(show) {
                 plyr.captionLangSelected = srclang;
 
-                if(plyr.usingTextTracks) {
+                if(tracks && plyr.usingTextTracks) {
                     for (var i = 0; i < tracks.length; i++) {
                         if (tracks[i].enabled) {
                             tracks[i].enabled = false;
